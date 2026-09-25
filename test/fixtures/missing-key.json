@@ -1,0 +1,10 @@
+[
+  {
+    "severity": "error",
+    "rule": "syntax",
+    "line": 2,
+    "column": 1,
+    "length": 1,
+    "message": "missing key name before separator"
+  }
+]

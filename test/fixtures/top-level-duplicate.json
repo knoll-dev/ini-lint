@@ -1,0 +1,10 @@
+[
+  {
+    "severity": "warning",
+    "rule": "duplicate-key",
+    "line": 2,
+    "column": 1,
+    "length": 4,
+    "message": "key \"name\" was already set at line 1 at the top level"
+  }
+]

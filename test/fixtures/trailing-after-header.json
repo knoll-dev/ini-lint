@@ -1,0 +1,10 @@
+[
+  {
+    "severity": "error",
+    "rule": "syntax",
+    "line": 1,
+    "column": 9,
+    "length": 5,
+    "message": "unexpected text after section header: \"oops\""
+  }
+]

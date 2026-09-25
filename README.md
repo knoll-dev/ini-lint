@@ -88,8 +88,20 @@ findings with `rule: "syntax"`, same as any other check.
 - `src/cli.ts` -- reads files from argv and prints findings in a code-frame
   style with a caret under the offending span.
 
+## Testing
+
+```
+npm test
+```
+
+Linter tests are fixture-based: each case in `test/fixtures/` is a pair of
+files, `<name>.ini` and `<name>.json`, where the JSON file is the exact
+array of findings `lint()` should produce for that input. Adding a
+regression case means dropping in a new pair, not editing test code.
+Parser tests cover line/column bookkeeping directly. Both run on Node's
+built-in test runner, so there's nothing to install.
+
 ## Status
 
-Early. No test suite yet, no config for turning rules off, no handling of
-quoted values or inline comments after a value. See the issues for what's
-next.
+Early. No config for turning rules off, no handling of quoted values or
+inline comments after a value. See the issues for what's next.
