@@ -30,6 +30,44 @@ test('parseIni reports the key column past leading whitespace', () => {
   ]);
 });
 
+function values(source: string): string[] {
+  return parseIni(source).entries.flatMap((e) => (e.kind === 'pair' ? [e.value] : []));
+}
+
+test('parseIni strips inline comments that follow whitespace', () => {
+  assert.deepStrictEqual(values('a = 1 ; one\nb = 2\t# two\nc = x;y\nd = p#q'), [
+    '1',
+    '2',
+    'x;y',
+    'p#q',
+  ]);
+});
+
+test('parseIni unquotes values and keeps comment characters inside quotes', () => {
+  assert.deepStrictEqual(
+    values('a = "  padded ; kept  " ; note\nb = \'C:\\temp\'\nc = "say \\"hi\\"\\n"\nd = ""'),
+    ['  padded ; kept  ', 'C:\\temp', 'say "hi"\n', ''],
+  );
+});
+
+test('parseIni reports an unterminated quoted value', () => {
+  const result = parseIni('key = "oops');
+
+  assert.deepStrictEqual(result.entries, []);
+  assert.deepStrictEqual(result.errors, [
+    { line: 1, column: 7, length: 5, message: 'quoted value is missing a closing "' },
+  ]);
+});
+
+test('parseIni reports text after a closing quote', () => {
+  const result = parseIni('key = "a"  b');
+
+  assert.deepStrictEqual(result.entries, []);
+  assert.deepStrictEqual(result.errors, [
+    { line: 1, column: 12, length: 1, message: 'unexpected text after quoted value: "b"' },
+  ]);
+});
+
 test('parseIni tracks line numbers across CRLF and LF line endings', () => {
   const result = parseIni('[a]\r\nk = v\n[b]\r\n');
 

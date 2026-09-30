@@ -1,5 +1,5 @@
-// Line-oriented parser for INI files. It does not try to interpret values
-// (quoting, escapes, types) yet -- that belongs to a later pass. Its job is
+// Line-oriented parser for INI files. Values may be quoted and may carry an
+// inline comment, but are not typed. Its job is
 // to turn source text into a sequence of sections and key/value pairs while
 // keeping exact line/column positions for everything, since that is what
 // makes the linter's error messages worth reading.
@@ -40,6 +40,68 @@ function findSeparator(line: string): number {
   if (eq === -1) return colon;
   if (colon === -1) return eq;
   return Math.min(eq, colon);
+}
+
+const ESCAPES: Record<string, string> = { n: '\n', t: '\t', '"': '"', '\\': '\\' };
+
+type ValueResult = { value: string } | { error: Omit<ParseError, 'line'> };
+
+// `start` is the index in `line` just past the separator. Double quotes
+// allow a small set of backslash escapes; single quotes are taken literally
+// so Windows paths don't need doubled backslashes. An unquoted value ends at
+// the first ";" or "#" that follows whitespace, so "a;b" and "c#1" survive.
+function parseValue(line: string, start: number): ValueResult {
+  let i = start;
+  while (i < line.length && (line[i] === ' ' || line[i] === '\t')) i++;
+
+  const quote = line[i];
+  if (quote !== '"' && quote !== "'") {
+    const comment = line.slice(i).search(/[ \t][;#]/);
+    const end = comment === -1 ? line.length : i + comment;
+    return { value: line.slice(i, end).trim() };
+  }
+
+  let value = '';
+  let j = i + 1;
+  let closed = false;
+  while (j < line.length) {
+    const ch = line[j];
+    if (ch === quote) {
+      closed = true;
+      break;
+    }
+    if (quote === '"' && ch === '\\' && j + 1 < line.length && line[j + 1] in ESCAPES) {
+      value += ESCAPES[line[j + 1]];
+      j += 2;
+      continue;
+    }
+    value += ch;
+    j++;
+  }
+
+  if (!closed) {
+    return {
+      error: {
+        column: i + 1,
+        length: line.length - i,
+        message: `quoted value is missing a closing ${quote}`,
+      },
+    };
+  }
+
+  const rest = line.slice(j + 1);
+  const trimmedRest = rest.trim();
+  if (trimmedRest.length > 0 && !trimmedRest.startsWith(';') && !trimmedRest.startsWith('#')) {
+    const offset = rest.length - rest.trimStart().length;
+    return {
+      error: {
+        column: j + 2 + offset,
+        length: trimmedRest.length,
+        message: `unexpected text after quoted value: "${trimmedRest}"`,
+      },
+    };
+  }
+  return { value };
 }
 
 export function parseIni(source: string): ParseResult {
@@ -126,12 +188,16 @@ export function parseIni(source: string): ParseResult {
       continue;
     }
 
-    const value = rawLine.slice(separatorIndex + 1).trim();
+    const parsed = parseValue(rawLine, separatorIndex + 1);
+    if ('error' in parsed) {
+      errors.push({ line: lineNumber, ...parsed.error });
+      continue;
+    }
 
     entries.push({
       kind: 'pair',
       key,
-      value,
+      value: parsed.value,
       line: lineNumber,
       keyColumn: leading + 1,
       keyLength: key.length,

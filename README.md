@@ -62,10 +62,17 @@ don't fail the run).
 - keys with no name before the separator (`= value`)
 - duplicate keys within the same section
 - duplicate section declarations
+- quoted values with no closing quote, or with text after the closing quote
 
 Comments start a line with `;` or `#`. Keys and values can be separated by
 `=` or `:`. Leading and trailing whitespace around keys, section names, and
 values is trimmed.
+
+Values can be wrapped in double or single quotes to keep surrounding
+whitespace or comment characters. Double-quoted values understand `\"`,
+`\\`, `\n` and `\t`; single-quoted values are literal. An unquoted value
+ends at a `;` or `#` that follows whitespace, so `url = a#b` keeps its `#`
+but `port = 80 ; http` is read as `80`.
 
 ## Library use
 
@@ -103,5 +110,4 @@ built-in test runner, so there's nothing to install.
 
 ## Status
 
-Early. No config for turning rules off, no handling of quoted values or
-inline comments after a value. See the issues for what's next.
+Early. No config for turning rules off and no JSON output yet.
